@@ -1,0 +1,212 @@
+Users
+user_id (UUID, PK): Mã định danh duy nhất.
+email (VARCHAR 255, UNIQUE): Tên đăng nhập.
+password_hash (VARCHAR 255): Mật khẩu mã hóa.
+education_level (VARCHAR 50): Cấp bậc học (Middle school, High school, University). (chia ra để cho AI đưa đề hợp với trình độ)
+preferred_style (VARCHAR 50): Kiểu giải thích (Short, Detailed, Step-by-step).
+subscription_plan (VARCHAR 50): Gói cước (Free, Premium) - Phục vụ Monetization. ( nếu muốn)
+xp_points (INT): Tổng điểm kinh nghiệm. (tăng lvl và độ khó)
+is_active (BOOLEAN): Trạng thái tài khoản (chống lạm dụng/spam)
+created_at, updated_at (TIMESTAMP).
+
+User_Sessions (Bảo mật & Theo dõi thiết bị)
+session_id (UUID, PK)
+user_id (UUID, FK)
+refresh_token (VARCHAR 255) - not null
+expires_at (TIMESTAMP) - not null
+
+Subjects
+subject_id SERIAL PRIMARY KEY,
+subject_name VARCHAR(100) - unique, not null
+
+Questions
+question_id (UUID, PK)
+user_id (UUID, FK)
+subject_id (INT, FK)
+content_text (TEXT): Nội dung câu hỏi.
+image_url (VARCHAR 255): Đường dẫn ảnh gốc (nếu có).
+extracted_text_from_image (TEXT): Chữ quét được từ ảnh (OCR).
+question_hash (VARCHAR 255, INDEX): Chuỗi băm của nội dung câu hỏi để kiểm tra trùng lặp nhanh (Caching).
+status (VARCHAR 20): Trạng thái (Pending, Resolved, Failed).
+created_at (TIMESTAMP).
+
+AI_Answers
+answer_id (UUID, PK)
+question_id (UUID, FK, UNIQUE)
+content_data (JSONB): Lưu trữ toàn bộ câu trả lời AI dưới dạng JSON (bao gồm: main_content, step_by_step, key_concepts, common_mistakes) giúp giao diện linh hoạt render.
+is_cached_response (BOOLEAN): Đánh dấu câu trả lời này được tạo mới hay lấy từ bộ nhớ đệm (Cache).
+api_tokens_used (INT): Theo dõi số lượng Token API AI đã tiêu thụ để quản lý ngân sách dự án.
+ai_model_version (VARCHAR 50): Lưu phiên bản AI đang dùng (VD: GPT-4-mini, Gemini-Flash).
+
+Bookmarks
+bookmark_id (UUID, PK)
+user_id (UUID, FK)
+answer_id (UUID, FK)
+folder_name (VARCHAR 100): Phục vụ tính năng "Organize questions by subject" (Tổ chức câu hỏi theo môn học).
+created_at (TIMESTAMP)
+
+Quizzes
+quiz_id (UUID, PK)
+user_id (UUID, FK)
+subject_id (INT, FK)
+base_question_id (UUID, FK, NULLABLE): Trỏ về câu hỏi gốc nếu bài tập này được sinh ra từ một câu hỏi cụ thể trong lịch sử.
+score_percentage (DECIMAL 5,2): Tỷ lệ chính xác.
+completed_at (TIMESTAMP)
+
+Quiz_Questions
+qq_id (UUID, PK)
+quiz_id (UUID, FK)
+question_type (VARCHAR 50): (Multiple_Choice, Fill_Blank, Short_Answer). 
+question_payload (JSONB): Chứa nội dung, các đáp án (A, B, C, D) và đáp án đúng.
+user_answer (TEXT): Lựa chọn của người dùng.
+is_correct (BOOLEAN).
+instant_feedback (TEXT): Phản hồi tức thời từ AI.
+
+Activity_Logs (Phục vụ Dashboard Tracking)
+log_id (BIGINT, PK)
+user_id (UUID, FK)
+activity_type (VARCHAR 50): (Asked_Question, Completed_Quiz, Reviewed_Answer).
+time_spent_seconds (INT): Phục vụ tính năng "Time spent reviewing answers".  
+created_at (TIMESTAMP)
+
+User_Achievements
+user_id (UUID, FK)
+badge_id (INT, FK)
+unlocked_at (TIMESTAMP)
+(Khóa chính là cặp user_id + badge_id)
+
+
+
+
+
+-- =========================
+-- USERS & AUTHENTICATION
+-- =========================
+CREATE TABLE Users (
+    user_id UUID PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    education_level VARCHAR(50), -- Middle school, High school, University
+    preferred_style VARCHAR(50), -- Short, Detailed, Step-by-step
+    subscription_plan VARCHAR(50), -- Free, Premium
+    xp_points INT DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE User_Sessions (
+    session_id UUID PRIMARY KEY,
+    user_id UUID REFERENCES Users(user_id),
+    refresh_token VARCHAR(255) NOT NULL,
+    expires_at TIMESTAMP NOT NULL
+);
+
+-- =========================
+-- SUBJECTS & QUESTIONS
+-- =========================
+CREATE TABLE Subjects (
+    subject_id SERIAL PRIMARY KEY,
+    subject_name VARCHAR(100) UNIQUE NOT NULL
+);
+
+CREATE TABLE Questions (
+    question_id UUID PRIMARY KEY,
+    user_id UUID REFERENCES Users(user_id),
+    subject_id INT REFERENCES Subjects(subject_id),
+    content_text TEXT NOT NULL,
+    image_url VARCHAR(255),
+    extracted_text_from_image TEXT,
+    question_hash VARCHAR(255),
+    status VARCHAR(20) DEFAULT 'Pending', -- Pending, Resolved, Failed
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =========================
+-- AI ANSWERS
+-- =========================
+CREATE TABLE AI_Answers (
+    answer_id UUID PRIMARY KEY,
+    question_id UUID UNIQUE REFERENCES Questions(question_id),
+    content_data JSON NOT NULL, -- Đã chuyển từ JSONB sang JSON
+    is_cached_response BOOLEAN DEFAULT FALSE,
+    api_tokens_used INT DEFAULT 0,
+    ai_model_version VARCHAR(50)
+);
+
+-- =========================
+-- BOOKMARKS
+-- =========================
+CREATE TABLE Bookmarks (
+    bookmark_id UUID PRIMARY KEY,
+    user_id UUID REFERENCES Users(user_id),
+    answer_id UUID REFERENCES AI_Answers(answer_id),
+    folder_name VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =========================
+-- QUIZZES & PRACTICE
+-- =========================
+CREATE TABLE Quizzes (
+    quiz_id UUID PRIMARY KEY,
+    user_id UUID REFERENCES Users(user_id),
+    subject_id INT REFERENCES Subjects(subject_id),
+    base_question_id UUID REFERENCES Questions(question_id),
+    score_percentage DECIMAL(5,2),
+    completed_at TIMESTAMP
+);
+
+CREATE TABLE Quiz_Questions (
+    qq_id UUID PRIMARY KEY,
+    quiz_id UUID REFERENCES Quizzes(quiz_id),
+    question_type VARCHAR(50), -- Multiple_Choice, Fill_Blank, Short_Answer
+    question_payload JSON NOT NULL, -- Đã chuyển từ JSONB sang JSON
+    user_answer TEXT,
+    is_correct BOOLEAN,
+    instant_feedback TEXT
+);
+
+-- =========================
+-- ACTIVITY LOGS
+-- =========================
+CREATE TABLE Activity_Logs (
+    log_id BIGSERIAL PRIMARY KEY,
+    user_id UUID REFERENCES Users(user_id),
+    activity_type VARCHAR(50), -- Asked_Question, Completed_Quiz, Reviewed_Answer
+    time_spent_seconds INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =========================
+-- ACHIEVEMENTS
+-- =========================
+CREATE TABLE User_Achievements (
+    user_id UUID REFERENCES Users(user_id),
+    badge_id INT,
+    unlocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, badge_id)
+);
+
+-- =========================
+-- NOTIFICATIONS (NEW)
+-- =========================
+CREATE TABLE Notifications (
+    notification_id UUID PRIMARY KEY,
+    user_id UUID REFERENCES Users(user_id),
+    message TEXT NOT NULL,
+    type VARCHAR(50), -- Reminder, Alert, Motivation
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_read BOOLEAN DEFAULT FALSE
+);
+
+-- =========================
+-- LEADERBOARD (NEW)
+-- =========================
+CREATE TABLE Leaderboard (
+    leaderboard_id UUID PRIMARY KEY,
+    user_id UUID REFERENCES Users(user_id),
+    rank INT,
+    xp_points INT,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
