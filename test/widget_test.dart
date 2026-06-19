@@ -1,30 +1,40 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:ai_mentor_study/main.dart';
+import 'package:ai_mentor_study/app.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('Auth screen switches between login and sign up', (tester) async {
+    await tester.pumpWidget(const AiMentorApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.byType(TextField), findsNWidgets(2));
+    expect(find.text('Login'), findsNothing);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    await tester.tap(find.byIcon(Icons.language));
+    await tester.pumpAndSettle();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('Login'), findsWidgets);
+    expect(find.text('Smart expense management'), findsOneWidget);
+
+    final signUpLink = find.byType(TextButton);
+    await tester.ensureVisible(signUpLink);
+    tester.widget<TextButton>(signUpLink).onPressed?.call();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TextField), findsNWidgets(3));
+  });
+
+  testWidgets('Login button opens the home screen', (tester) async {
+    await tester.pumpWidget(const AiMentorApp());
+
+    final loginButton = find.byType(FilledButton);
+    await tester.ensureVisible(loginButton);
+    await tester.tap(loginButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('Ask AI'), findsOneWidget);
+    expect(find.text('Quiz'), findsOneWidget);
+    expect(find.text('Profile'), findsOneWidget);
   });
 }
