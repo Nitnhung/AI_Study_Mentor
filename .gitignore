@@ -1,0 +1,12 @@
+build/ 
+.dart_tool/ 
+.idea/ 
+*.iml 
+android/.gradle/ 
+android/local.properties 
+ios/Flutter/ephemeral/ 
+ios/Flutter/Generated.xcconfig 
+ios/Flutter/flutter_export_environment.sh 
+windows/flutter/ephemeral/ 
+.flutter-plugins 
+.flutter-plugins-dependencies 
