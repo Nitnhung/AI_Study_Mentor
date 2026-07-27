@@ -1,0 +1,126 @@
+-- Xóa Database cũ nếu bị lỗi dở dang và tạo lại từ đầu
+DROP DATABASE IF EXISTS mentor_db;
+CREATE DATABASE mentor_db;
+USE mentor_db;
+
+-- =========================
+-- TẠO CÁC BẢNG ĐỘC LẬP (Không có khóa ngoại phụ thuộc)
+-- =========================
+CREATE TABLE Users (
+    user_id CHAR(36) PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    education_level VARCHAR(50), 
+    preferred_style VARCHAR(50), 
+    subscription_plan VARCHAR(50), 
+    xp_points INT DEFAULT 0,
+    is_active BIT(1) DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE Subjects (
+    subject_id CHAR(36) PRIMARY KEY,
+    subject_name VARCHAR(100) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- =========================
+-- TẠO CÁC BẢNG CÓ KHÓA NGOẠI 
+-- =========================
+CREATE TABLE User_Sessions (
+    session_id CHAR(36) PRIMARY KEY,
+    user_id CHAR(36) NOT NULL,
+    login_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Đã fix tự động lấy giờ
+    logout_time TIMESTAMP NULL DEFAULT NULL,        -- Đã fix lỗi #1067
+    device_info VARCHAR(255),
+    FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
+);
+
+CREATE TABLE Questions (
+    question_id CHAR(36) PRIMARY KEY,
+    user_id CHAR(36) NOT NULL,
+    subject_id CHAR(36),
+    question_text TEXT NOT NULL,
+    image_url VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (subject_id) REFERENCES Subjects(subject_id) ON DELETE SET NULL
+);
+
+CREATE TABLE quizzes (
+    quiz_id CHAR(36) PRIMARY KEY,
+    user_id CHAR(36) NOT NULL,
+    subject_id CHAR(36) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    total_score INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (subject_id) REFERENCES Subjects(subject_id) ON DELETE CASCADE
+);
+
+CREATE TABLE quiz_questions (
+    id CHAR(36) PRIMARY KEY,
+    quiz_id CHAR(36) NOT NULL,
+    question_id CHAR(36) NOT NULL,
+    is_correct BIT(1),
+    FOREIGN KEY (quiz_id) REFERENCES quizzes(quiz_id) ON DELETE CASCADE,
+    FOREIGN KEY (question_id) REFERENCES Questions(question_id) ON DELETE CASCADE
+);
+
+CREATE TABLE ai_answers (
+    answer_id CHAR(36) PRIMARY KEY,
+    question_id CHAR(36) NOT NULL,
+    answer_text TEXT NOT NULL, 
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (question_id) REFERENCES Questions(question_id) ON DELETE CASCADE
+);
+
+CREATE TABLE bookmarks (
+    bookmark_id CHAR(36) PRIMARY KEY,
+    user_id CHAR(36) NOT NULL,
+    question_id CHAR(36) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (question_id) REFERENCES Questions(question_id) ON DELETE CASCADE
+);
+
+CREATE TABLE activity_logs (
+    log_id CHAR(36) PRIMARY KEY,
+    user_id CHAR(36) NOT NULL,
+    activity_type VARCHAR(100), 
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
+);
+
+CREATE TABLE user_achievements (
+    achievement_id CHAR(36) PRIMARY KEY,
+    user_id CHAR(36) NOT NULL,
+    achievement_name VARCHAR(150) NOT NULL,
+    description TEXT,
+    unlocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
+);
+
+CREATE TABLE notifications (
+    notification_id CHAR(36) PRIMARY KEY,
+    user_id CHAR(36) NOT NULL,
+    message TEXT NOT NULL,
+    is_read BIT(1) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
+);
+
+CREATE TABLE leaderboard (
+    leaderboard_id CHAR(36) PRIMARY KEY,
+    user_id CHAR(36) NOT NULL UNIQUE,
+    ranking INT, 
+    total_xp_points INT,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
+);
