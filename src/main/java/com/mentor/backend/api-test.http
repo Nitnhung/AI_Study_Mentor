@@ -1,0 +1,10 @@
+POST http://localhost:8080/api/users
+Content-Type: application/json
+
+{
+  "email": "student01@gmail.com",
+  "passwordHash": "123456",
+  "educationLevel": "University",
+  "preferredStyle": "Visual",
+  "isActive": true
+}
