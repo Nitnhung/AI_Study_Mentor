@@ -30,7 +30,8 @@ void main() {
     final loginButton = find.byType(FilledButton);
     await tester.ensureVisible(loginButton);
     await tester.tap(loginButton);
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('Home'), findsOneWidget);
     expect(find.text('Ask AI'), findsOneWidget);

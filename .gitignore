@@ -10,3 +10,8 @@ ios/Flutter/flutter_export_environment.sh
 windows/flutter/ephemeral/ 
 .flutter-plugins 
 .flutter-plugins-dependencies 
+
+# Local branch worktrees and extracted service test copies
+/remote_test/
+/remote_test_ai/
+/remote_test_backend/

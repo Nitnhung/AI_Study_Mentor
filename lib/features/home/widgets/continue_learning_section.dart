@@ -1,26 +1,84 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-
+import 'package:http/http.dart' as http;
 import '../../../core/theme/app_colors.dart';
+import '../models/activity_model.dart';
+import '../../quiz/pages/quiz_play_screen.dart';
 
-class ContinueLearningSection extends StatelessWidget {
+class ContinueLearningSection extends StatefulWidget {
   const ContinueLearningSection({super.key});
 
   @override
+  State<ContinueLearningSection> createState() =>
+      _ContinueLearningSectionState();
+}
+
+class _ContinueLearningSectionState extends State<ContinueLearningSection> {
+  List<QuizResult> _recentQuizzes = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRecentLearning();
+  }
+
+  Future<void> _fetchRecentLearning() async {
+    try {
+      final response = await http.get(
+        Uri.parse('http://10.0.2.2:8080/api/results'),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
+        setState(() {
+          _recentQuizzes = data.map((a) => QuizResult.fromJson(a)).toList();
+          _recentQuizzes.sort((a, b) => b.submittedAt.compareTo(a.submittedAt));
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return const Column(
-      children: [
-        _ContinueLearningCard(
-          icon: Icons.lock_outline,
-          title: 'JWT Authentication',
-          subtitle: 'Lần học gần nhất: 2 giờ trước',
-        ),
-        SizedBox(height: 10),
-        _ContinueLearningCard(
-          icon: Icons.translate,
-          title: 'Simple Past Tense',
-          subtitle: 'Tiếng Anh',
-        ),
-      ],
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_recentQuizzes.isEmpty) {
+      return const _ContinueLearningCard(
+        icon: Icons.lightbulb_outline,
+        title: 'Bắt đầu bài học đầu tiên',
+        subtitle: 'Chọn một môn học bên trên để bắt đầu',
+      );
+    }
+
+    return Column(
+      children: _recentQuizzes
+          .take(2)
+          .map(
+            (quiz) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: InkWell(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => QuizPlayScreen(topic: quiz.quizId),
+                    ),
+                  );
+                },
+                child: _ContinueLearningCard(
+                  icon: Icons.history,
+                  title: 'Học lại: ${quiz.quizId}',
+                  subtitle: 'Điểm cao nhất: ${quiz.score.toStringAsFixed(1)}',
+                ),
+              ),
+            ),
+          )
+          .toList(),
     );
   }
 }
