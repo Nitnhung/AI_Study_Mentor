@@ -1,0 +1,32 @@
+# Local secrets and environment
+.env
+.env.*
+!.env.example
+application-local.properties
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Java / Maven / IDE
+target/
+.idea/
+*.iml
+
+# Flutter / Dart
+.dart_tool/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+android/.gradle/
+android/local.properties
+**/ephemeral/
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+
+# Operating systems and editors
+.DS_Store
+Thumbs.db
+*.log
