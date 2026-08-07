@@ -1,0 +1,22 @@
+# Common ignores
+.idea/
+*.iml
+.DS_Store
+
+# Frontend/Flutter
+**/build/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/android/local.properties
+
+# Backend/Java
+**/target/
+**/*.class
+**/bin/
+
+# AI Service/Python (if any)
+**/__pycache__/
+**/*.pyc
+**/.venv/
+**/venv/
